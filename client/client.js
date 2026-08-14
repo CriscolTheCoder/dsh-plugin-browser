@@ -247,6 +247,22 @@ async function waitMarketIdle(timeoutMs) {
   throw new Error('timeout waiting for market')
 }
 
+/**
+ * Derive a determinate progress percentage from pnpm's streaming
+ * "Progress: resolved N, reused R, downloaded D, added A" lines.
+ * Returns null when the line carries no parseable totals (clone/other phases),
+ * in which case the UI falls back to the indeterminate sweep.
+ */
+function parseProgressPct(line) {
+  if (typeof line !== 'string') return null
+  const m = /Progress:\s*resolved\s+(\d+)(?:,\s*reused\s+(\d+))?(?:,\s*downloaded\s+(\d+))?(?:,\s*added\s+(\d+))?/.exec(line)
+  if (m === null) return null
+  const total = Number(m[1])
+  const done = Number(m[2] || 0) + Number(m[3] || 0) + Number(m[4] || 0)
+  if (!(total > 0)) return null
+  return Math.max(0, Math.min(100, Math.round(done / total * 100)))
+}
+
 function MarketSection({ t }) {
   const [request, setRequest] = useState(0)
   const [query, setQuery] = useState('')
@@ -285,7 +301,7 @@ function MarketSection({ t }) {
     const poll = async () => {
       try {
         const status = await api('/dsh-market/status')
-        if (current) setProgress({ line: status.lastLine || null, seconds: status.seconds, active: status.active })
+        if (current) setProgress({ line: status.lastLine || null, seconds: status.seconds, active: status.active, pct: parseProgressPct(status.lastLine) })
       } catch (e) { /* keep last progress */ }
     }
     poll()
@@ -402,7 +418,7 @@ function MarketSection({ t }) {
         )
       ) : null,
       busy !== null ? h('div', { className: 'dshpb-progress' },
-        h('div', { className: 'dshpb-pbar' }, h('i')),
+        h('div', { className: 'dshpb-pbar' }, h('i', { style: progress && progress.pct != null ? { width: progress.pct + '%', animation: 'none', background: 'var(--dsw-alias-state-business-primary,#0969da)' } : undefined })),
         h('div', { style: { marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 } },
           h('span', { style: { flex: 1, minWidth: 0 } },
             t('actionRunning') + (progress && progress.seconds != null ? ' ' + progress.seconds + 's' : '') +
