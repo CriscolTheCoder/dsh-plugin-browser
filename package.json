@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-browser",
-  "description": "Browse every plugin currently loaded in your DSH profile — agent tool + Web settings page with versions, sources, and load status. · 轻松浏览当前 DSH 已加载的全部插件：agent 工具 + Web 设置页（版本 / 来源 / 加载状态）。",
-  "version": "0.1.0",
+  "description": "Plugin market entry point + installed-plugin dashboard for DSH — browse the awesome-dsh-plugin catalog with live installed/loaded state, one-click install/update/uninstall through dshmarket, plus a `list_plugins` / `browse_plugin_market` agent tool. · DSH 插件市场入口 + 已装插件面板：浏览 awesome 插件目录（实时已装/加载状态），经 dshmarket 一键安装/更新/卸载，附 list_plugins / browse_plugin_market 两个 agent 工具。",
+  "version": "0.2.0",
   "type": "module",
   "main": "lib/index.js",
   "license": "MIT",
@@ -16,7 +16,9 @@
     "dsh",
     "dsh-plugin",
     "plugin-inventory",
-    "plugin-browser"
+    "plugin-browser",
+    "plugin-market",
+    "marketplace"
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1"
@@ -46,6 +48,7 @@
   "files": [
     "lib",
     "client",
+    "data",
     "cordis.patch.yml"
   ]
 }
