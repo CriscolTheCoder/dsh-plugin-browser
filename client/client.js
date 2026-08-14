@@ -168,7 +168,7 @@ const CSS = `
 .dshpb-desc{font-size:12px;color:var(--dsw-alias-label-secondary,#6b7280);padding:0 12px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .dshpb-actions{display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap;margin-top:auto}
 .dshpb-btn{border:1px solid var(--dsw-alias-border-l2,#d0d7de);background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:12px;cursor:pointer;border-radius:6px;padding:4px 10px}
-.dshpb-btn[data-primary=true]{background:var(--dsw-alias-state-business-primary,#0969da);border-color:var(--dsw-alias-state-business-primary,#0969da);color:#fff}
+.dshpb-btn[data-primary=true]{background:var(--dsw-alias-state-business-primary,#0969da);border-color:var(--dsw-alias-state-business-primary,#0969da);color:var(--dsw-alias-label-primary-inverted,#fff)}
 .dshpb-btn[data-danger=true]{color:var(--dsw-alias-state-error-primary,#cf222e);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary,#cf222e) 40%,transparent)}
 .dshpb-btn:disabled{opacity:.5;cursor:not-allowed}
 .dshpb-progress{font-size:12px;color:var(--dsw-alias-label-secondary,#6b7280);padding:0 12px 10px;word-break:break-all}
