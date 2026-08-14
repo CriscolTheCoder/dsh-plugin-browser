@@ -5,6 +5,11 @@
   "type": "module",
   "main": "lib/index.js",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CriscolTheCoder/dsh-plugin-browser.git"
+  },
+  "homepage": "https://github.com/CriscolTheCoder/dsh-plugin-browser",
   "keywords": [
     "deepseek",
     "harness",

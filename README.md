@@ -11,8 +11,10 @@
 ## 安装
 
 ```bash
-# 从本目录安装到目标 profile（例如 web）
-dsh plugin --profile web add file:/绝对路径/dsh-plugin-browser
+# 从 GitHub 安装到目标 profile（例如 web）
+dsh plugin --profile web add github:CriscolTheCoder/dsh-plugin-browser
+# 本地开发时也可以直接用 file: 指向源码目录
+# dsh plugin --profile web add file:/绝对路径/dsh-plugin-browser
 # 重启 dsh 生效后：
 #   - 会话里问 agent：`列出当前加载的所有插件`
 #   - 或到 设置 → 插件 → 已装插件 页签浏览
