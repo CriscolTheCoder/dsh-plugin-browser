@@ -59,6 +59,7 @@ const zh = {
   marketMissing: '未检测到 dshmarket：安装/更新/卸载按钮不可用。',
   marketMissingHint: '请先安装 dshmarket（dsh plugin --profile web add dshmarket）或使用 dsh CLI 管理插件。',
   actionRunning: '正在执行…',
+  busyWait: '已有操作正在进行中，请稍候（同一时间只支持一个操作）',
   actionFailed: '操作失败：',
   phase: '加载状态',
   source: '来源',
@@ -114,6 +115,7 @@ const en = {
   marketMissing: 'dshmarket not detected: install/update/uninstall buttons are disabled.',
   marketMissingHint: 'Install dshmarket first (dsh plugin --profile web add dshmarket) or use the dsh CLI to manage plugins.',
   actionRunning: 'Working…',
+  busyWait: 'Another operation is already running — please wait (only one at a time)',
   actionFailed: 'Action failed: ',
   phase: 'Load status',
   source: 'Source',
@@ -172,6 +174,10 @@ const CSS = `
 .dshpb-btn[data-danger=true]{color:var(--dsw-alias-state-error-primary,#cf222e);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary,#cf222e) 40%,transparent)}
 .dshpb-btn:disabled{opacity:.5;cursor:not-allowed}
 .dshpb-progress{font-size:12px;color:var(--dsw-alias-label-secondary,#6b7280);padding:0 12px 10px;word-break:break-all}
+.dshpb-pbar{position:relative;height:6px;border-radius:99px;background:var(--dsw-alias-bg-layer-2,#eef0f2);overflow:hidden}
+.dshpb-pbar i{position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:99px;background:linear-gradient(90deg,transparent,var(--dsw-alias-state-business-primary,#0969da),transparent);animation:dshpb-pbar 1.3s ease-in-out infinite}
+@keyframes dshpb-pbar{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+.dshpb-hint{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#0969da) 10%,transparent);border:1px solid color-mix(in srgb,var(--dsw-alias-state-business-primary,#0969da) 30%,transparent);color:var(--dsw-alias-label-primary,#1f2328);border-radius:8px;padding:8px 12px;font-size:12px;margin:10px 4px 0}
 .dshpb-fail{color:var(--dsw-alias-state-error-primary,#cf222e);align-items:center;gap:10px;display:flex;font-size:13px}
 .dshpb-fail button{border:1px solid var(--dsw-alias-border-l2,#d0d7de);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;cursor:pointer;background:0 0;border-radius:6px;padding:4px 10px}
 .dshpb-details{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px}
@@ -246,6 +252,7 @@ function MarketSection({ t }) {
   const [busy, setBusy] = useState(null) // plugin name or url currently acting
   const [progress, setProgress] = useState(null)
   const [actionError, setActionError] = useState(null)
+  const [busyHint, setBusyHint] = useState(null)
 
   const reload = useCallback(() => {
     setState({ status: 'loading' })
@@ -260,6 +267,27 @@ function MarketSection({ t }) {
       .catch(() => { if (current) setState({ status: 'error' }) })
     return () => { current = false }
   }, [request])
+
+  useEffect(() => {
+    if (busyHint === null) return
+    const timer = setTimeout(() => setBusyHint(null), 3500)
+    return () => clearTimeout(timer)
+  }, [busyHint])
+
+  // While an action runs, poll dshmarket status to drive the progress bar.
+  useEffect(() => {
+    if (busy === null) return
+    let current = true
+    const poll = async () => {
+      try {
+        const status = await api('/dsh-market/status')
+        if (current) setProgress({ line: status.lastLine || null, seconds: status.seconds, active: status.active })
+      } catch (e) { /* keep last progress */ }
+    }
+    poll()
+    const timer = setInterval(poll, 1500)
+    return () => { current = false; clearInterval(timer) }
+  }, [busy])
 
   const zhLang = isZh()
   const categories = state.status === 'ready' && state.data.categories ? state.data.categories : null
@@ -334,6 +362,7 @@ function MarketSection({ t }) {
         t('marketMissingHint')
       ) : null,
       actionError ? h('div', { className: 'dshpb-fail' }, h('p', { role: 'alert' }, t('actionFailed') + actionError)) : null,
+      busyHint ? h('div', { className: 'dshpb-hint' }, busyHint) : null,
       h('div', { className: 'dshpb-bar' },
         h('div', { className: 'dshpb-search' },
           h('input', { type: 'search', value: query, placeholder: t('searchPh'), 'aria-label': t('searchPh'), onChange: (e) => setQuery(e.currentTarget.value) })
@@ -352,7 +381,12 @@ function MarketSection({ t }) {
           )
         )
       ) : null,
-      progress && progress.line ? h('p', { className: 'dshpb-progress' }, t('actionRunning') + ' ' + progress.line) : null,
+      busy !== null ? h('div', { className: 'dshpb-progress' },
+        h('div', { className: 'dshpb-pbar' }, h('i')),
+        h('div', { style: { marginTop: 6 } },
+          t('actionRunning') + (progress && progress.seconds != null ? ' ' + progress.seconds + 's' : '') +
+          (progress && progress.line ? ' — ' + progress.line : ''))
+      ) : null,
       plugins.length === 0 ? h('p', { className: 'dshpb-status' }, t('emptyMarket')) : null,
       plugins.length > 0 && filtered.length === 0 ? h('p', { className: 'dshpb-status' }, t('empty')) : null,
       filtered.length > 0 ? h('ul', { className: 'dshpb-cards' }, filtered.map((plugin) => {
@@ -376,11 +410,11 @@ function MarketSection({ t }) {
             h('span', null, ' · '), plugin.loaded ? t('loaded') : t('notLoaded'), plugin.fiberPhase ? ' · ' + phaseLabel : null
           ) : null,
           h('div', { className: 'dshpb-actions' },
-            !plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', 'data-primary': 'true', disabled: !marketInstalled || busy !== null, onClick: () => installPlugin(plugin) },
+            !plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', 'data-primary': 'true', disabled: !marketInstalled, onClick: () => busy !== null ? setBusyHint(t('busyWait')) : installPlugin(plugin) },
               isBusy ? t('actionRunning') : t('install')) : null,
-            plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', disabled: !marketInstalled || busy !== null || (plugin.spec || '').startsWith('file:') || (plugin.spec || '').startsWith('link:'), title: (plugin.spec || '').startsWith('file:') || (plugin.spec || '').startsWith('link:') ? 'file:/link: 安装从本地更新' : undefined, onClick: () => updatePlugin(plugin) },
+            plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', disabled: !marketInstalled || (plugin.spec || '').startsWith('file:') || (plugin.spec || '').startsWith('link:'), title: (plugin.spec || '').startsWith('file:') || (plugin.spec || '').startsWith('link:') ? 'file:/link: 安装从本地更新' : undefined, onClick: () => busy !== null ? setBusyHint(t('busyWait')) : updatePlugin(plugin) },
               isBusy ? t('actionRunning') : t('update')) : null,
-            plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', 'data-danger': 'true', disabled: !marketInstalled || busy !== null || plugin.depName === null, onClick: () => uninstallPlugin(plugin) },
+            plugin.installed ? h('button', { type: 'button', className: 'dshpb-btn', 'data-danger': 'true', disabled: !marketInstalled || plugin.depName === null, onClick: () => busy !== null ? setBusyHint(t('busyWait')) : uninstallPlugin(plugin) },
               isBusy ? t('actionRunning') : t('uninstall')) : null,
             h('a', { className: 'dshpb-btn', href: plugin.url, target: '_blank', rel: 'noreferrer' }, t('viewRepo'))
           )
