@@ -60,6 +60,8 @@ const zh = {
   marketMissingHint: '请先安装 dshmarket（dsh plugin --profile web add dshmarket）或使用 dsh CLI 管理插件。',
   actionRunning: '正在执行…',
   busyWait: '已有操作正在进行中，请稍候（同一时间只支持一个操作）',
+  cancel: '取消',
+  cancelled: '已取消',
   actionFailed: '操作失败：',
   phase: '加载状态',
   source: '来源',
@@ -116,6 +118,8 @@ const en = {
   marketMissingHint: 'Install dshmarket first (dsh plugin --profile web add dshmarket) or use the dsh CLI to manage plugins.',
   actionRunning: 'Working…',
   busyWait: 'Another operation is already running — please wait (only one at a time)',
+  cancel: 'Cancel',
+  cancelled: 'Cancelled',
   actionFailed: 'Action failed: ',
   phase: 'Load status',
   source: 'Source',
@@ -320,6 +324,10 @@ function MarketSection({ t }) {
     try {
       setProgress({ line: '…' })
       const result = await fn()
+      if (result.cancelled === true) {
+        setBusyHint(t('cancelled'))
+        return
+      }
       setProgress({ line: result.stderr && !result.ok ? result.stderr.slice(-600) : null })
       if (result.ok !== true && result.error) throw new Error(result.error)
       if (result.ok === false) throw new Error((result.stderr || '').slice(-400) || 'pnpm failed')
@@ -332,6 +340,18 @@ function MarketSection({ t }) {
       setProgress(null)
     }
   }
+
+  const cancelAction = useCallback(() => {
+    api('/dsh-market/cancel', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+      .then((body) => {
+        if (body.cancelled === true) {
+          setBusy(null)
+          setProgress(null)
+          setBusyHint(t('cancelled'))
+        }
+      })
+      .catch(() => {})
+  }, [t])
 
   const installPlugin = (plugin) => runAction('install:' + plugin.name, () =>
     api('/dsh-market/install', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: plugin.url }) }))
@@ -383,9 +403,12 @@ function MarketSection({ t }) {
       ) : null,
       busy !== null ? h('div', { className: 'dshpb-progress' },
         h('div', { className: 'dshpb-pbar' }, h('i')),
-        h('div', { style: { marginTop: 6 } },
-          t('actionRunning') + (progress && progress.seconds != null ? ' ' + progress.seconds + 's' : '') +
-          (progress && progress.line ? ' — ' + progress.line : ''))
+        h('div', { style: { marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 } },
+          h('span', { style: { flex: 1, minWidth: 0 } },
+            t('actionRunning') + (progress && progress.seconds != null ? ' ' + progress.seconds + 's' : '') +
+            (progress && progress.line ? ' — ' + progress.line : '')),
+          h('button', { type: 'button', className: 'dshpb-btn', onClick: cancelAction }, t('cancel'))
+        )
       ) : null,
       plugins.length === 0 ? h('p', { className: 'dshpb-status' }, t('emptyMarket')) : null,
       plugins.length > 0 && filtered.length === 0 ? h('p', { className: 'dshpb-status' }, t('empty')) : null,
